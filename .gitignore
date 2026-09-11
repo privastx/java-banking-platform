@@ -1,0 +1,10 @@
+.env
+.env.local
+target/
+*.class
+*.jar
+*.war
+.idea/
+.vscode/
+*.log
+.DS_Store
