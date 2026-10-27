@@ -64,10 +64,11 @@ public class CustomerService {
     public List<AccountDto> getCustomerAccounts(Long customerId) {
         getById(customerId);
         return customerRepository.findById(customerId)
-                .map(customer -> customer.getAccounts().stream()
-                        .map(account -> new AccountDto(
+                .map(customer -> {
+                    List<AccountDto> result = customer.getAccounts().stream()
+                            .map(account -> new AccountDto(
                                 account.getId(),
-                                customer.getId(),
+                                customerId,
                                 account.getAccountNumber(),
                                 account.getAccountType(),
                                 account.getCurrency(),
@@ -75,7 +76,9 @@ public class CustomerService {
                                 account.getStatus(),
                                 account.getCreatedAt(),
                                 account.getUpdatedAt()))
-                        .collect(Collectors.toList()))
+                            .collect(Collectors.toList());
+                    return result;
+                })
                 .orElse(List.of());
     }
 
@@ -83,9 +86,10 @@ public class CustomerService {
     public List<TransactionDto> getCustomerTransactions(Long customerId) {
         getById(customerId);
         return customerRepository.findById(customerId)
-                .map(customer -> customer.getAccounts().stream()
-                        .flatMap(account -> account.getTransactions().stream())
-                        .map(transaction -> new TransactionDto(
+                .map(customer -> {
+                    List<TransactionDto> result = customer.getAccounts().stream()
+                            .flatMap(account -> account.getTransactions().stream())
+                            .map(transaction -> new TransactionDto(
                                 transaction.getId(),
                                 transaction.getAccount().getId(),
                                 transaction.getTransactionType(),
@@ -99,7 +103,9 @@ public class CustomerService {
                                 transaction.getStatus(),
                                 transaction.getDescription(),
                                 transaction.getCreatedAt()))
-                        .collect(Collectors.toList()))
+                            .collect(Collectors.toList());
+                    return result;
+                })
                 .orElse(List.of());
     }
 
@@ -107,10 +113,11 @@ public class CustomerService {
     public List<SupportTicketDto> getCustomerSupportTickets(Long customerId) {
         getById(customerId);
         return customerRepository.findById(customerId)
-                .map(customer -> customer.getSupportTickets().stream()
-                        .map(ticket -> new SupportTicketDto(
+                .map(customer -> {
+                    List<SupportTicketDto> result = customer.getSupportTickets().stream()
+                            .map(ticket -> new SupportTicketDto(
                                 ticket.getId(),
-                                customer.getId(),
+                                customerId,
                                 ticket.getSubject(),
                                 ticket.getDescription(),
                                 ticket.getCategory(),
@@ -119,7 +126,9 @@ public class CustomerService {
                                 ticket.getCreatedAt(),
                                 ticket.getUpdatedAt(),
                                 ticket.getResolvedAt()))
-                        .collect(Collectors.toList()))
+                            .collect(Collectors.toList());
+                    return result;
+                })
                 .orElse(List.of());
     }
 }

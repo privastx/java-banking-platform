@@ -1,5 +1,3 @@
-CREATE TYPE customer_status AS ENUM ('ACTIVE', 'SUSPENDED', 'CLOSED');
-
 CREATE TABLE customers (
     id BIGSERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -8,7 +6,7 @@ CREATE TABLE customers (
     phone VARCHAR(50),
     date_of_birth DATE,
     country VARCHAR(10) NOT NULL,
-    status customer_status NOT NULL DEFAULT 'ACTIVE',
+    status VARCHAR NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

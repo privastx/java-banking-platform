@@ -7,22 +7,17 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
+      maximum-pool-size: ${DB_POOL_MAX}
+      minimum-idle: ${DB_POOL_MIN}
 
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+      ddl-auto: ${JPA_DDL_AUTO}
+    show-sql: ${SHOW_SQL}
 
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
 
 server:
   port: ${SERVER_PORT}
@@ -31,10 +26,47 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: ${ACTUATOR_ENDPOINTS:health,info}
 
 logging:
   level:
-    com.example.bankingplatform: INFO
-    org.springframework.web: INFO
+    com.example.bankingplatform: ${LOGGING_LEVEL}
+    org.springframework.web: ${LOGGING_LEVEL}
     org.hibernate.SQL: DEBUG
+    dev.langchain4j: DEBUG
+    org.apache.http: ${LOGGING_LEVEL_APACHE}
+    org.hibernate.orm.connections.pooling: ${LOGGING_LEVEL_HIBERNATE_POOL}
+
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: ${LLM_API_KEY}
+      base-url: ${LLM_URL}
+      model-name: ${LLM_MODEL}
+      temperature: ${LLM_TEMPERATURE}
+      max-tokens: ${LLM_MAX_TOKENS}
+      timeout: ${LLM_TIMEOUT}
+      log-requests: ${LLM_LOG_REQUESTS}
+      log-responses: ${LLM_LOG_RESPONSES}
+  qdrant:
+    embedding-store:
+      url: ${QDRANT_URL}
+      collection-name: ${QDRANT_COLLECTION}
+      distance: ${QDRANT_DISTANCE}
+
+ai:
+  rag:
+    retrieval:
+      top-k: ${AI_RAG_RETRIEVAL_TOP_K}
+      similarity-threshold: ${AI_RAG_RETRIEVAL_SIMILARITY_THRESHOLD}
+    context:
+      max-tokens: ${AI_RAG_MAX_CONTEXT_TOKENS}
+    chunking:
+      size: ${AI_RAG_CHUNK_SIZE}
+      overlap: ${AI_RAG_CHUNK_OVERLAP}
+      max-iterations: ${AI_RAG_CHUNK_MAX_ITERATIONS}
+    knowledge-base-dir: ${KNOWLEDGE_BASE_DIR}
+  http:
+    connect-timeout-seconds: ${AI_HTTP_CONNECT_TIMEOUT}
+  memory:
+    max-messages: ${AI_MEMORY_MAX_MESSAGES}

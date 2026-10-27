@@ -1,24 +1,23 @@
 package com.example.bankingplatform.customer;
 
+import com.example.bankingplatform.account.Account;
+import com.example.bankingplatform.support.SupportTicket;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.example.bankingplatform.account.Account;
-import com.example.bankingplatform.support.SupportTicket;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
 
 @Entity
 @Table(name = "customers")
 @Getter
 @Setter
-@ToString(exclude = {"accounts", "supportTickets"})
 public class Customer {
 
     @Id

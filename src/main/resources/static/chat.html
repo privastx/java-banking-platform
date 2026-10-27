@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banking Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .chat-bubble {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 60px;
+            height: 60px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .chat-bubble:hover {
+            transform: scale(1.1);
+        }
+
+        .chat-bubble.hidden {
+            display: none;
+        }
+
+        .chat-window {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 400px;
+            height: 600px;
+            max-height: calc(100vh - 48px);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 1001;
+            overflow: hidden;
+        }
+
+        .chat-window.active {
+            display: flex;
+        }
+
+        .chat-header {
+            padding: 16px;
+            background: #007bff;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chat-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #007bff;
+            color: white;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            padding: 12px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            display: none;
+            margin: 0 16px 8px 16px;
+        }
+
+        .typing-indicator.visible {
+            display: block;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .chat-input {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chat-input.hidden {
+            display: none;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input input:focus {
+            border-color: #007bff;
+        }
+
+        .chat-input button {
+            padding: 12px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .chat-input button:hover {
+            background: #0056b3;
+        }
+
+        .chat-input button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .quick-actions {
+            padding: 12px 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .quick-actions.hidden {
+            display: none;
+        }
+
+        .quick-action-btn {
+            padding: 8px 14px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            transition: all 0.2s;
+        }
+
+        .quick-action-btn:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .quick-action-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .confirmation-actions {
+            padding: 12px 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .confirmation-actions.hidden {
+            display: none;
+        }
+
+        .confirmation-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .confirmation-btn.confirm {
+            background: #28a745;
+            color: white;
+        }
+
+        .confirmation-btn.confirm:hover {
+            background: #218838;
+        }
+
+        .confirmation-btn.cancel {
+            background: #dc3545;
+            color: white;
+        }
+
+        .confirmation-btn.cancel:hover {
+            background: #c82333;
+        }
+
+        .confirmation-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .mode-indicator {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            flex-shrink: 0;
+        }
+
+        .mode-indicator strong {
+            color: #007bff;
+        }
+
+        .input-hint {
+            padding: 8px 16px;
+            background: #fff3cd;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #856404;
+            flex-shrink: 0;
+        }
+
+        .input-hint.hidden {
+            display: none;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            border-top: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+
+        .back-btn.hidden {
+            display: none;
+        }
+
+        .back-btn button {
+            width: 100%;
+            padding: 10px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .back-btn button:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-bubble" id="chatBubble">💬</div>
+    
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header">
+            <h3>Banking Assistant</h3>
+            <button class="close-btn" id="closeBtn">×</button>
+        </div>
+        
+        <div class="mode-indicator" id="modeIndicator">
+            Mode: <strong>RAG (Knowledge Base)</strong>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                Hi! I'm your banking assistant. Ask me anything about account policies, transactions, security, or other banking topics.
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <div class="quick-actions" id="quickActions">
+            <button class="quick-action-btn" data-action="transaction_history">View Transactions</button>
+            <button class="quick-action-btn" data-action="lost_or_stolen_card">Lost/Stolen Card</button>
+            <button class="quick-action-btn" data-action="support_tickets">View Support Tickets</button>
+        </div>
+        
+        <div class="confirmation-actions hidden" id="confirmationActions">
+            <button class="confirmation-btn confirm" id="confirmBtn">CONFIRM</button>
+            <button class="confirmation-btn cancel" id="cancelBtn">CANCEL</button>
+        </div>
+        
+        <div class="back-btn hidden" id="backBtn">
+            <button id="backToMainBtn">← Back to Main Menu</button>
+        </div>
+        
+        <div class="input-hint hidden" id="inputHint">
+            Type your response and press Send
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Type your message..." />
+            <button type="button" id="sendBtn">Send</button>
+        </div>
+    </div>
+
+<script>
+    const STATE_CONFIG = {
+        'CHAT_MAIN.RAG_IDLE': { quickActions: true, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: false, backBtn: false },
+        'CHAT_MAIN.RAG_LOADING': { quickActions: false, chatInput: false, typingIndicator: true, confirmationActions: false, inputHint: false, backBtn: false },
+        'CHAT_MAIN.ERROR': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: false },
+        'TRANSACTION_HISTORY.WORKFLOW_AWAITING_IDENTITY': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: true },
+        'TRANSACTION_HISTORY.WORKFLOW_COMPLETE': { quickActions: false, chatInput: false, typingIndicator: false, confirmationActions: false, inputHint: false, backBtn: true },
+        'TRANSACTION_HISTORY.ERROR': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: false },
+        'LOST_OR_STOLEN_CARD.WORKFLOW_AWAITING_IDENTITY': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: true },
+        'LOST_OR_STOLEN_CARD.WORKFLOW_AWAITING_CONFIRMATION': { quickActions: false, chatInput: false, typingIndicator: false, confirmationActions: true, inputHint: false, backBtn: false },
+        'LOST_OR_STOLEN_CARD.WORKFLOW_COMPLETE': { quickActions: false, chatInput: false, typingIndicator: false, confirmationActions: false, inputHint: false, backBtn: true },
+        'LOST_OR_STOLEN_CARD.ERROR': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: false },
+        'SUPPORT_TICKETS.WORKFLOW_AWAITING_IDENTITY': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: true },
+        'SUPPORT_TICKETS.WORKFLOW_COMPLETE': { quickActions: false, chatInput: false, typingIndicator: false, confirmationActions: false, inputHint: false, backBtn: true },
+        'SUPPORT_TICKETS.ERROR': { quickActions: false, chatInput: true, typingIndicator: false, confirmationActions: false, inputHint: true, backBtn: false }
+    };
+
+    const suffixMap = {
+        'AWAITING_CUSTOMER_IDENTITY': 'WORKFLOW_AWAITING_IDENTITY',
+        'AWAITING_CONFIRMATION': 'WORKFLOW_AWAITING_CONFIRMATION',
+        'COMPLETED': 'WORKFLOW_COMPLETE'
+    };
+
+    const chatBubble = document.getElementById('chatBubble');
+    const chatWindow = document.getElementById('chatWindow');
+    const closeBtn = document.getElementById('closeBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatInputContainer = document.querySelector('.chat-input');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const quickActions = document.getElementById('quickActions');
+    const confirmationActions = document.getElementById('confirmationActions');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const modeIndicator = document.getElementById('modeIndicator');
+    const inputHint = document.getElementById('inputHint');
+    const backBtn = document.getElementById('backBtn');
+    const backToMainBtn = document.getElementById('backToMainBtn');
+
+    const uiElements = {
+        quickActions,
+        chatInputContainer,
+        typingIndicator,
+        confirmationActions,
+        inputHint,
+        backBtn
+    };
+
+    let sessionId = 'conv_' + Date.now();
+    let isLoading = false;
+    let currentState = 'CHAT_MAIN.RAG_IDLE';
+
+    chatBubble.addEventListener('click', () => {
+        chatWindow.classList.add('active');
+        chatBubble.classList.add('hidden');
+    });
+
+    closeBtn.addEventListener('click', () => {
+        chatWindow.classList.remove('active');
+        chatBubble.classList.remove('hidden');
+    });
+
+    sendBtn.addEventListener('click', () => sendMessage());
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    document.querySelectorAll('.quick-action-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            if (action === 'transaction_history') {
+                startWorkflow('TRANSACTION_HISTORY');
+            } else if (action === 'support_tickets') {
+                startWorkflow('SUPPORT_TICKETS');
+            } else if (action === 'lost_or_stolen_card') {
+                startWorkflow('LOST_OR_STOLEN_CARD');
+            }
+        });
+    });
+
+    confirmBtn.addEventListener('click', () => sendConfirmation('CONFIRM'));
+    cancelBtn.addEventListener('click', () => sendConfirmation('CANCEL'));
+    backToMainBtn.addEventListener('click', backToMain);
+
+    function addMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        messageDiv.textContent = text;
+        chatMessages.appendChild(messageDiv);
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+
+    function buildUiState(response) {
+        if (!response.workflow) {
+            return 'CHAT_MAIN.RAG_IDLE';
+        }
+
+        const workflow = response.workflow;
+        const suffixMap = {
+            'AWAITING_CUSTOMER_IDENTITY': 'WORKFLOW_AWAITING_IDENTITY',
+            'AWAITING_CONFIRMATION': 'WORKFLOW_AWAITING_CONFIRMATION',
+            'COMPLETED': 'WORKFLOW_COMPLETE'
+        };
+
+        const suffix = suffixMap[response.state] || 'WORKFLOW_COMPLETE';
+        return `${workflow}.${suffix}`;
+    }
+
+    function enterState(state) {
+        currentState = state;
+        const config = STATE_CONFIG[state];
+        if (!config) {
+            console.warn('Unknown state:', state);
+            return;
+        }
+
+        if (state.startsWith('CHAT_MAIN.')) {
+            modeIndicator.innerHTML = `Mode: <strong>${state.split('.')[1].replace(/_/g, ' ').toUpperCase()}</strong>`;
+        } else {
+            const workflow = state.split('.')[0];
+            modeIndicator.innerHTML = `Workflow: <strong>${workflow.replace(/-/g, ' ').toUpperCase()}</strong>`;
+        }
+
+        uiElements.quickActions.classList.toggle('hidden', !config.quickActions);
+        uiElements.chatInputContainer.classList.toggle('hidden', !config.chatInput);
+        uiElements.typingIndicator.classList.toggle('visible', config.typingIndicator);
+        uiElements.confirmationActions.classList.toggle('hidden', !config.confirmationActions);
+        uiElements.inputHint.classList.toggle('hidden', !config.inputHint);
+        uiElements.backBtn.classList.toggle('hidden', !config.backBtn);
+
+        chatInput.disabled = !config.chatInput;
+        chatInput.placeholder = config.chatInput ? 'Type your message...' : '';
+        if (config.chatInput) chatInput.focus();
+    }
+
+    function startWorkflow(workflow) {
+        enterState('CHAT_MAIN.RAG_LOADING');
+        addMessage(`Viewing ${workflow.replace(/_/g, ' ')}`, 'user');
+        sendMessage(workflow);
+    }
+
+    function backToMain() {
+        sessionId = 'conv_' + Date.now();
+        chatInput.value = '';
+        enterState('CHAT_MAIN.RAG_IDLE');
+        addMessage("Hi! I'm your banking assistant. Ask me anything about account policies, transactions, security, or other banking topics.", 'assistant');
+    }
+
+    function sendConfirmation(action) {
+        if (isLoading) return;
+
+        addMessage(action, 'user');
+
+        const workflowToSend = currentState.split('.')[0];
+
+        enterState('CHAT_MAIN.RAG_LOADING');
+
+        const timeoutId = setTimeout(() => {
+            addMessage('Sorry, the response timed out. Please try again.', 'assistant');
+            isLoading = false;
+            enterState(`${workflowToSend}.ERROR`);
+        }, 30000);
+
+        fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: action,
+                sessionId: sessionId,
+                workflow: workflowToSend,
+                confirmationAction: action
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearTimeout(timeoutId);
+            isLoading = false;
+            handleResponse(data);
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            clearTimeout(timeoutId);
+            isLoading = false;
+            addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+            enterState('CHAT_MAIN.ERROR');
+        });
+    }
+
+    function sendMessage(workflow) {
+        const message = workflow || chatInput.value.trim();
+        if (!message || isLoading) return;
+
+        if (!workflow) {
+            addMessage(message, 'user');
+            chatInput.value = '';
+        }
+
+        const workflowToSend = workflow || (currentState.startsWith('CHAT_MAIN.') ? null : currentState.split('.')[0]);
+
+        isLoading = true;
+        enterState('CHAT_MAIN.RAG_LOADING');
+
+        const timeoutId = setTimeout(() => {
+            addMessage('Sorry, the response timed out. Please try again.', 'assistant');
+            isLoading = false;
+            const workflowPrefix = workflowToSend || 'CHAT_MAIN';
+            enterState(`${workflowPrefix}.ERROR`);
+        }, 30000);
+
+        const requestBody = {
+            message: message,
+            sessionId: sessionId
+        };
+
+        if (workflowToSend) {
+            requestBody.workflow = workflowToSend;
+        }
+
+        fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearTimeout(timeoutId);
+            isLoading = false;
+            handleResponse(data);
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            clearTimeout(timeoutId);
+            isLoading = false;
+            addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+            enterState('CHAT_MAIN.ERROR');
+        });
+    }
+
+    function handleResponse(data) {
+        const state = buildUiState(data);
+        addMessage(data.message, 'assistant');
+        enterState(state);
+    }
+
+    chatInput.addEventListener('input', () => {
+        if (currentState !== 'CHAT_MAIN.RAG_IDLE' && chatInput.value.trim().toLowerCase() === 'customer support') {
+            backToMain();
+        }
+    });
+</script>
+</body>
+</html>

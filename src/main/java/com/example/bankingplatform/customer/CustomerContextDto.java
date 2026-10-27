@@ -5,13 +5,11 @@ import com.example.bankingplatform.transaction.TransactionDto;
 import com.example.bankingplatform.support.SupportTicketDto;
 import java.util.List;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.AllArgsConstructor;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
 public class CustomerContextDto {
     private CustomerDto customer;

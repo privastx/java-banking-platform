@@ -1,6 +1,6 @@
 # Banking Platform
 
-A lightweight, conventional Java Spring Boot banking platform that serves as a baseline application for future capabilities.
+A lightweight, conventional Java Spring Boot banking platform with an AI-powered customer support assistant.
 
 ## Architecture
 
@@ -12,8 +12,20 @@ com.example.bankingplatform/
 ├── account/         - Account domain
 ├── transaction/     - Transaction domain
 ├── support/         - Support ticket domain
+├── ai/              - AI-powered support (LangGraph4j, RAG)
 └── common/          - Shared components (exception handling, config)
 ```
+
+### AI Module
+
+The `ai/` module provides an AI customer support assistant with:
+
+- **LangGraph4j workflows** — multi-turn stateful conversations for transaction history, support tickets, and lost/stolen card reporting (uses `AgentState` with typed accessors)
+- **RAG (Retrieval-Augmented Generation)** — knowledge base Q&A using Qdrant vector store (uses `ChatLanguageModel` for text generation)
+- **Tool-based architecture** — AI interacts with banking data through explicitly defined tools (FindCustomer, GetRecentTransactions, GetSupportTickets, CreateSupportTicket, SearchDocument)
+- **Case-insensitive confirmation** — `CONFIRM`/`CANCEL` accepted in any case (e.g., "confirm", "Confirm", "CONFIRM")
+- **Graph nodes** — `ResolveIdentityNode`, `GetTransactionsNode`, `GetSupportTicketsNode`, `ConfirmNode`, `ConfirmPromptNode`, `CreateTicketNode`, `RespondNode`
+- **Chat widget** — unified `/v1/api/chat` endpoint for the chat UI with auto-routing between RAG and LangGraph workflows
 
 ## Technology Stack
 
@@ -22,6 +34,10 @@ com.example.bankingplatform/
 - **Spring Data JPA** with Hibernate
 - **PostgreSQL** database
 - **Flyway** for database migrations
+- **LangChain4j** — LLM integration, tools, embeddings
+- **LangGraph4j** — stateful graphs, nodes, edges, checkpoints
+- **Qdrant** — vector store for RAG (384-dim, cosine similarity)
+- **MiniLM** — in-process embedding model (ONNX, 384-dim)
 - **JUnit 5** + **Mockito** for testing
 - **OpenAPI/Swagger** for API documentation
 - **Maven** for build management
@@ -33,22 +49,86 @@ com.example.bankingplatform/
 - Java 21 or higher
 - PostgreSQL database running
 - Maven 3.8+
+- **For AI features:**
+  - LLM server (vLLM or llama.cpp) on port 8000
+  - Qdrant vector store on port 6333
 
 ### Configuration
 
-The application uses a `.env` file for database credentials.
+The application uses a `.env` file for all credentials and configuration.
 
 1. Copy the example file:
 ```bash
 cp .env.example .env
 ```
 
-2. Update `.env` with your PostgreSQL credentials:
+2. Update `.env` with your credentials:
+
+**Database:**
 ```
 DB_URL=jdbc:postgresql://localhost:5432/banking_platform
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
+```
+
+**LLM Server (for AI features):**
+```
+LLM_URL=http://localhost:8000/v1
+LLM_MODEL=openai/gpt-oss-20b
+LLM_API_KEY=your-api-key
+LLM_TEMPERATURE=0.2
+LLM_MAX_TOKENS=1024
+LLM_TIMEOUT=30s
+```
+
+**Qdrant (for AI features):**
+```
+QDRANT_URL=http://localhost:6333
+QDRANT_COLLECTION=knowledge_documents
+```
+
+**Knowledge Base:**
+```
+KNOWLEDGE_BASE_DIR=classpath:knowledge-base
+```
+
+**AI Agent:**
+```
+AI_MAX_TOOL_CALLS=5
+AI_SESSION_TIMEOUT=30m
+```
+
+**RAG Pipeline:**
+```
+AI_RAG_RETRIEVAL_TOP_K=5
+AI_RAG_RETRIEVAL_SIMILARITY_THRESHOLD=0.75
+AI_RAG_MAX_CONTEXT_TOKENS=3000
+AI_RAG_CHUNK_SIZE=800
+AI_RAG_CHUNK_OVERLAP=150
+AI_RAG_CHUNK_MAX_ITERATIONS=1000
+```
+
+**Server:**
+```
 SERVER_PORT=8080
+```
+
+**JPA:**
+```
+JPA_DDL_AUTO=update
+SHOW_SQL=false
+```
+
+**Logging:**
+```
+LOGGING_LEVEL=INFO
+LOGGING_LEVEL_APACHE=DEBUG
+LOGGING_LEVEL_HIBERNATE_POOL=WARN
+```
+
+**Actuator:**
+```
+ACTUATOR_ENDPOINTS=health,info
 ```
 
 The `.env` file is gitignored and won't be committed to the repository.
@@ -116,6 +196,75 @@ The API is documented using OpenAPI 3.0. Access the interactive documentation at
 - `POST /api/support/tickets` - Create new support ticket
 - `PUT /api/support/tickets/{id}` - Update support ticket
 - `GET /api/support/tickets/customer/{customerId}` - Get customer support tickets
+
+#### AI Support Chat (LangGraph)
+- `POST /api/ai/support/chat` - Send a message to the AI support agent
+  - Request: `{sessionId, workflow, message, confirmationAction?}`
+  - Workflows: `TRANSACTION_HISTORY`, `LOST_OR_STOLEN_CARD`
+  - States: `AWAITING_CUSTOMER_IDENTITY`, `AWAITING_CONFIRMATION`, `COMPLETED`
+
+#### AI Chat Widget
+- `GET /api/ai/chat/widget` - Chat widget endpoint
+
+#### AI RAG (Knowledge Base Q&A)
+- `POST /api/ai/support/rag` - Ask a general knowledge question
+  - Request: `{sessionId, message}`
+  - Answers from the knowledge base with source attribution
+
+#### Knowledge Base Management
+- `GET /v1/api/kb` - List knowledge base documents (optional `?category=` filter)
+- `GET /v1/api/kb/{id}` - Get document by ID (with chunks)
+- `DELETE /v1/api/kb/{id}` - Delete document, its chunks, and Qdrant embeddings
+- `POST /v1/api/kb/reindex` - Reindex knowledge base (skip unchanged)
+- `POST /v1/api/kb/reindex?force=true` - Full clear + reingest
+
+## AI Features
+
+### Workflows
+
+The AI support agent handles three workflows:
+
+1. **Transaction History** — Customer asks about recent transactions. The agent resolves identity, fetches the 3 most recent transactions, and presents them in natural language.
+
+2. **Lost/Stolen Card** — Customer reports a lost or stolen card. The agent resolves identity, requests explicit CONFIRM/CANCEL confirmation, and creates a high-priority security support ticket.
+
+3. **Support Tickets** — Customer asks about their support tickets. The agent resolves identity and retrieves all open support tickets.
+
+4. **General Knowledge (RAG)** — Customer asks general questions (e.g., branch hours, transaction processing times). The system retrieves relevant knowledge base documents and generates a grounded response with source attribution.
+
+### Knowledge Base
+
+The RAG system uses markdown documents stored in the knowledge base directory:
+
+- Documents are parsed for title, category, and checksum
+- Content is chunked (~800 chars, 150 overlap)
+- Chunks are embedded via MiniLM and stored in Qdrant
+- Retrieval uses cosine similarity with configurable thresholds
+
+**Categories:** `ACCOUNT_POLICY`, `PAYMENT_POLICY`, `SECURITY_POLICY`, `TRANSACTION_POLICY`, `FAQ`, `PRODUCT_DOCUMENTATION`, `GENERAL`
+
+### AI API Example
+
+**Send a message to the support agent:**
+```bash
+curl -X POST http://localhost:8080/api/ai/support/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session-123",
+    "workflow": "TRANSACTION_HISTORY",
+    "message": "John Smith"
+  }'
+```
+
+**Ask a general knowledge question:**
+```bash
+curl -X POST http://localhost:8080/api/ai/support/rag \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session-123",
+    "message": "What hours are the branches open?"
+  }'
+```
 
 ## Database Schema
 
