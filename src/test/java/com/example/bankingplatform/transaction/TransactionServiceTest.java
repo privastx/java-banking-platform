@@ -34,9 +34,14 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
 
-    @Test
+@Test
     void createTransaction_shouldSaveAndReturnTransaction() {
+        Account account = new Account();
+        account.setId(1L);
+
         Transaction transaction = new Transaction();
+        transaction.setAccount(account);
+        transaction.setId(1L);
         transaction.setAmount(BigDecimal.valueOf(100));
         transaction.setTransactionType(TransactionType.PURCHASE);
 

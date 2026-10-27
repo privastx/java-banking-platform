@@ -8,18 +8,36 @@ import com.example.bankingplatform.transaction.Transaction;
 import com.example.bankingplatform.transaction.TransactionType;
 import com.example.bankingplatform.support.SupportTicket;
 import com.example.bankingplatform.support.SupportCategory;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
+@ActiveProfiles("test")
+@ExtendWith(SpringExtension.class)
 class EntityIntegrationTest {
+
+    static {
+        Dotenv dotenv = Dotenv.configure()
+            .directory(".")
+            .filename(".env.test")
+            .ignoreIfMissing()
+            .load();
+        
+        dotenv.entries().forEach(entry ->
+            System.setProperty(entry.getKey(), entry.getValue())
+        );
+    }
 
     @Autowired
     private TestEntityManager entityManager;
