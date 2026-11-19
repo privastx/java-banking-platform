@@ -2,6 +2,10 @@
 
 A lightweight, conventional Java Spring Boot banking platform with an AI-powered customer support assistant.
 
+<div align="center">
+  <img src="docs/screenshot/screen.gif" alt="description" width="400">
+</div>
+
 ## Architecture
 
 The application uses a conventional layered architecture with feature-oriented organization:
